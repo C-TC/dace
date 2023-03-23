@@ -2,7 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 import warnings
-from typing import List, Dict
+from typing import List, Dict, Any
 from enum import Enum
 import dace
 import os
@@ -43,7 +43,10 @@ class TensorFormat:
 CSR = TensorFormat([TensorModeType.Dense, TensorModeType.Sparse])
 CSC = TensorFormat([TensorModeType.Dense, TensorModeType.Sparse], [1, 0])
 CSF = TensorFormat([TensorModeType.Sparse, TensorModeType.Sparse, TensorModeType.Sparse])
-
+DCSR = TensorFormat([TensorModeType.Sparse, TensorModeType.Sparse])
+DCSC = TensorFormat([TensorModeType.Sparse, TensorModeType.Sparse], [1, 0])
+COO = TensorFormat([TensorModeType.Sparse_Not_Unique, TensorModeType.Singleton])
+SPARSE_VECTOR = TensorFormat([TensorModeType.Sparse])
 
 class TacoProxy:
     def __init__(self,
@@ -51,12 +54,14 @@ class TacoProxy:
                  output_dir: str = "/tmp",
                  name: str = 'Taco',
                  debug: bool = False,
-                 assemble_while_compute: bool = False) -> None:
+                 assemble_while_compute: bool = False,
+                 simplify_sdfg: bool = True) -> None:
         self.expr = expr
         self.output_dir = output_dir
         self.prefix = name
         self.debug = debug
         self.assemble_while_compute = assemble_while_compute
+        self.simplify_sdfg = simplify_sdfg
         # TODO: replace this
         self.taco_exec = "/home/tiachen/testspace/taco/build/bin/dace_taco"
         self.taco_args = []
@@ -86,26 +91,43 @@ class TacoProxy:
         return self
 
     def pos(self, i: str, ipos: str, tensor: str) -> TacoProxy:
-        self.transformations.append("pos(" + i + "," + ipos + "," + tensor + ")")
+        self.transformations.append("\"pos(" + i + "," + ipos + "," + tensor + ")\"")
         return self
 
     def fuse(self, i: str, j: str, f: str) -> TacoProxy:
-        self.transformations.append("fuse(" + i + "," + j + "," + f + ")")
+        self.transformations.append("\"fuse(" + i + "," + j + "," + f + ")\"")
         return self
 
     def split(self, i: str, i0: str, i1: str, factor: int) -> TacoProxy:
-        self.transformations.append("split(" + i + "," + i0 + "," + i1 + "," + str(factor) + ")")
+        self.transformations.append("\"split(" + i + "," + i0 + "," + i1 + "," + str(factor) + ")\"")
         return self
 
     def precompute(self, expr: str, i: str, iw: str) -> TacoProxy:
-        self.transformations.append("precompute(" + expr + "," + i + "," + iw + ")")
+        self.transformations.append("\"precompute(" + expr + "," + i + "," + iw + ")\"")
         return self
 
     def reorder(self, modes: List[str]) -> TacoProxy:
-        self.transformations.append("reorder(" + ','.join(modes) + ")")
+        self.transformations.append("\"reorder(" + ','.join(modes) + ")\"")
         return self
 
     # TODO: bound, unroll, parallelize
+
+    def set_transformations(self, transformations: List[Any]) -> TacoProxy:
+        for trans_args in transformations:
+            if trans_args[0] == 'pos':
+                self.pos(*trans_args[1:])
+            elif trans_args[0] == 'fuse':
+                self.fuse(*trans_args[1:])
+            elif trans_args[0] == 'split':
+                self.split(*trans_args[1:])
+            elif trans_args[0] == 'precompute':
+                self.precompute(*trans_args[1:])
+            elif trans_args[0] == 'reorder':
+                self.reorder(trans_args[1:])
+            else:
+                warnings.warn(f'Unidentified transformation {trans_args[0]}, ignored.')
+
+        return self
 
     def generate(self) -> None:
         self.taco_args = []
@@ -154,6 +176,10 @@ class TacoProxy:
 
         # load the generated SDFG
         self.gen_sdfg = dace.SDFG.from_file(os.path.join(self.output_dir, self.compute_sdfg_filename))
+
+        if self.simplify_sdfg:
+            self.gen_sdfg.simplify()
+            self.gen_sdfg.save(os.path.join(self.output_dir, self.compute_sdfg_filename))
 
     def get_sdfg(self) -> dace.SDFG:
         return self.gen_sdfg
