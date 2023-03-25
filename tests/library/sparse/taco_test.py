@@ -24,7 +24,10 @@ def test_spmm():
     test_format_comb('spmm', 'A(i,j) = B(i,k) * C(k,j)', [{'B': CSR}, {'B': CSC}, {'B': DCSR}, {'B': DCSC}, {'B': COO}], [[],], output_dir)
 
 def test_sddmm():
-    test_format_comb('sddmm', 'A(i,j) = B(i,j) * C(i,k) * D(k,j)', [{'A': CSR, 'B': CSR}, {'A': CSC, 'B': CSC}, {'A': DCSR, 'B': DCSR}, {'A': DCSC, 'B': DCSC}, {'B': COO}], [[],], output_dir)
+    test_format_comb('sddmm', 'A(i,j) = B(i,j) * C(i,k) * D(k,j)', [{'A': CSR, 'B': CSR}, {'A': CSC, 'B': CSC}, {'A': DCSR, 'B': DCSR}, {'A': DCSC, 'B': DCSC}, {'A': COO,'B': COO}], [[['sampled_replace','A','B'],],], output_dir)
+
+def test_sampled():
+    test_format_comb('sampled', 'A(i,j) = B(i,j) * C(i,k) * D(k,l) * E(l,j)', [{'A': CSR, 'B': CSR}, {'A': CSC, 'B': CSC}, {'A': DCSR, 'B': DCSR}, {'A': DCSC, 'B': DCSC}, {'A': COO, 'B': COO}], [[],], output_dir)
 
 def test_plus3():
     test_format_comb('plus3', 'A(i,j) = B(i,j) + C(i,j) + D(i,j)', [{'A': CSR, 'B': CSR, 'C': CSR, 'D': CSR}, {'A': CSC, 'B': CSC, 'C': CSC, 'D': CSC}, {'A': DCSR, 'B': DCSR, 'C': DCSR, 'D': DCSR}, {'A': DCSC, 'B': DCSC, 'C': DCSC, 'D': DCSC}], [[],], output_dir)
@@ -60,7 +63,7 @@ def test_sched_spmspv():
     test_format_comb('sched_spmspv', 'y(i) = A(i,j) * x(j)', [{'A': CSC, 'x': SPARSE_VECTOR},], [[],[['reorder','j', 'i'], ['pos', 'j', 'jpos', 'x'], ['split','jpos','jpos0','jpos1',16]]], output_dir)
 
 def test_sched_sddmm():
-    test_format_comb('sched_sddmm', 'A(i,k) = B(i,k) * C(i,j) * D(j,k)', [{'A': CSR, 'B': CSR},], [[],[['split','i','i0','i1',16],]], output_dir)
+    test_format_comb('sched_sddmm', 'A(i,k) += B(i,k) * C(i,j) * D(j,k)', [{'A': CSR, 'B': CSR},], [[],[['split','i','i0','i1',16]],[['reorder','i','k','j']]], output_dir)
 
 def test_sched_ttv():
     format_A = TensorFormat([TensorModeType.Dense, TensorModeType.Sparse])
@@ -75,4 +78,21 @@ def test_sched_ttm():
 
 
 if __name__ == "__main__":
+    test_spmv()
+    test_spmm()
+    test_sddmm()
+    test_plus3()
+    test_mattransmul()
+    test_residual()
+    test_ttv()
+    test_ttm()
+    test_mttkrp()
+    test_tensor_plus()
+    test_tensor_inner()
+    test_sched_spmv()
+    test_sched_spmm()
+    test_sched_spmspv()
+    test_sched_sddmm()
+    test_sched_ttv()
     test_sched_ttm()
+    test_sampled()

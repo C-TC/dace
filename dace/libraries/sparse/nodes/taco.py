@@ -5,6 +5,7 @@ import warnings
 from typing import List, Dict, Any
 from enum import Enum
 import dace
+from dace.transformation.interstate.loop_to_map import LoopToMap
 import os
 import subprocess
 
@@ -80,6 +81,8 @@ class TacoProxy:
         self.formats = {}
         self.transformations = []
 
+        self.sampled_replace_dict = {}
+
         self.gen_sdfg = None
 
     def set_formats(self, formats: Dict[str, TensorFormat]) -> TacoProxy:
@@ -89,6 +92,10 @@ class TacoProxy:
             self.formats[k] = v
 
         return self
+    
+    def sampled_replace(self, src_tensor: str, target_tensor: str) ->TacoProxy:
+        # special transformation for sddmm, see help info of dace_taco
+        self.sampled_replace_dict[src_tensor] = target_tensor
 
     def pos(self, i: str, ipos: str, tensor: str) -> TacoProxy:
         self.transformations.append("\"pos(" + i + "," + ipos + "," + tensor + ")\"")
@@ -124,6 +131,8 @@ class TacoProxy:
                 self.precompute(*trans_args[1:])
             elif trans_args[0] == 'reorder':
                 self.reorder(trans_args[1:])
+            elif trans_args[0] == 'sampled_replace':
+                self.sampled_replace(*trans_args[1:])
             else:
                 warnings.warn(f'Unidentified transformation {trans_args[0]}, ignored.')
 
@@ -146,6 +155,11 @@ class TacoProxy:
         self.taco_args.append("-O=" + self.output_dir)
 
         self.taco_args.append("-prefix=" + self.prefix)
+
+        if len(self.sampled_replace_dict) == 1:
+            # only support one pair for now
+            for src, target in self.sampled_replace_dict.items():
+                self.taco_args.append(f'-sampled-replace={src}:{target}')
 
         self.taco_args.append("-write-compute")
         self.taco_args.append("-write-assemble")
@@ -178,7 +192,7 @@ class TacoProxy:
         self.gen_sdfg = dace.SDFG.from_file(os.path.join(self.output_dir, self.compute_sdfg_filename))
 
         if self.simplify_sdfg:
-            self.gen_sdfg.simplify()
+            self.gen_sdfg.apply_transformations_repeated(LoopToMap)
             self.gen_sdfg.save(os.path.join(self.output_dir, self.compute_sdfg_filename))
 
     def get_sdfg(self) -> dace.SDFG:
