@@ -56,13 +56,15 @@ class TacoProxy:
                  name: str = 'Taco',
                  debug: bool = False,
                  assemble_while_compute: bool = False,
-                 simplify_sdfg: bool = True) -> None:
+                 simplify_sdfg: bool = True,
+                 force_dace_map: bool = True) -> None:
         self.expr = expr
         self.output_dir = output_dir
         self.prefix = name
         self.debug = debug
         self.assemble_while_compute = assemble_while_compute
         self.simplify_sdfg = simplify_sdfg
+        self.force_dace_map = force_dace_map
         # TODO: replace this
         self.taco_exec = "/home/tiachen/testspace/taco/build/bin/dace_taco"
         self.taco_args = []
@@ -155,6 +157,9 @@ class TacoProxy:
         self.taco_args.append("-O=" + self.output_dir)
 
         self.taco_args.append("-prefix=" + self.prefix)
+
+        if self.force_dace_map:
+            self.taco_args.append("-force-map")
 
         if len(self.sampled_replace_dict) == 1:
             # only support one pair for now
