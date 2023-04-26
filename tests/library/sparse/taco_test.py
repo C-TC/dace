@@ -82,23 +82,34 @@ def test_sched_ttm():
 # def test_sched_sampled():
 #     test_format_comb('sched_sampled', 'A(i,j) = B(i,j) * C(i,k) * D(k,l) * E(l,j)', [{'A': CSR, 'B': CSR},], [[['precompute', 'B(i,j) * E(l,j)', 'j', 'j'],],], output_dir)
 
+def test_gnn_sddmm():
+    test_format_comb('gnn_sddmm', 'D(i,j) = A(i,j) * B(i,k) * C(k,j)', [{'A': CSR, 'D': CSR}, ], [[['sampled_replace','D','A'],],], output_dir)
+
+def test_gnn_sddvm():
+    test_format_comb('gnn_sddvm', 'D(i,j) = A(i,j) * B(i) * C(j)', [{'A': CSR, 'D': CSR}, ], [[['sampled_replace','D','A'],],], output_dir)
+    
+def test_gnn_sddva():
+    test_format_comb('gnn_sddva', 'D(i,j) = A(i,j) * (B(i) + C(j))', [{'A': CSR, 'D': CSR}, ], [[['sampled_replace','D','A'],],], output_dir)
 
 if __name__ == "__main__":
-    test_spmv()
-    test_spmm()
-    test_sddmm()
-    test_plus3()
-    test_mattransmul()
-    test_residual()
-    test_ttv()
-    test_ttm()
-    test_mttkrp()
-    test_tensor_plus()
-    test_tensor_inner()
-    test_sched_spmv()
-    test_sched_spmm()
-    test_sched_spmspv()
-    test_sched_sddmm()
-    test_sched_ttv()
-    test_sched_ttm()
-    test_sampled()
+    # test_spmv()
+    # test_spmm()
+    # test_sddmm()
+    # test_plus3()
+    # test_mattransmul()
+    # test_residual()
+    # test_ttv()
+    # test_ttm()
+    # test_mttkrp()
+    # test_tensor_plus()
+    # test_tensor_inner()
+    # test_sched_spmv()
+    # test_sched_spmm()
+    # test_sched_spmspv()
+    # test_sched_sddmm()
+    # test_sched_ttv()
+    # test_sched_ttm()
+    # test_sampled()
+    test_gnn_sddmm()
+    test_gnn_sddvm()
+    test_gnn_sddva()

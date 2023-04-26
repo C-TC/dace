@@ -34,3 +34,13 @@ def sched_sddmm0compute(A_vals: dace.float64[size_A_vals], B2_crd: dace.int32[si
 sdfg = sched_sddmm0compute.to_sdfg()
 # sdfg.apply_transformations_repeated(MapInterchange)
 sdfg.view()
+ome, ime = None, None
+for state in sdfg.states():
+    for node in state.nodes():
+        if isinstance(node, dace.sdfg.nodes.MapEntry):
+            if node.map.params[0] == 'j':
+                ome = node
+            elif node.map.params[0] == 'kB':
+                ime = node
+assert ome is not None and ime is not None
+MapInterchange.apply_to(sdfg, outer_map_entry=ome, inner_map_entry=ime)
